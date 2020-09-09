@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>電話メモ</title>
+<script src="js/jquery-2.1.3.min.js"></script>
+<link rel="stylesheet" href="css/sample02.css">
+</head>
+<body>
+<header>
+<h1>電話メモ</h1>
+</header>
+<main>
+  <div class="tablearea">
+    <table>
+        <tr>
+          <th>入電時間</th>
+          <td>
+          <ul>
+            <li>
+              <label for="now"><input type="radio" name="whichtime" id="now" checked="checked">現在時刻</label> 
+            </li>
+            <li>
+              <label for="othertime"><input type="radio" name="whichtime" id="othertime">その他の日時：</label>
+              <input type="date" name="date" id="date" disabled="disabled"><input type="time" name="time" id="time" disabled="disabled">
+            </li>
+        </tr>
+        <tr>
+          <th>from</th> 
+          <td>
+            <input type="text" name="from" id="from" class="textarea"> 様
+          </td>
+        </tr>
+        <tr>
+          <th>to</th>
+          <td>
+            <input type="text" name="to" id="to" class="textarea"> さん
+        </tr>
+        <tr>
+          <th>用件</th>
+          <td>
+          <ul>
+            <li>
+              <input type="radio" name="request" id="orikaeshi" value="折り返しお電話ください。"><label for="orikaeshi">折り返しお電話ください</label>
+            </li>
+            <li>
+              <input type="radio" name="request" id="kakenaoshi" value="後ほど掛け直します。"><label for="kakenaoshi">後ほど掛け直します</label>
+            </li>
+            <li>
+              <input type="radio" name="request" id="mail" value="メールをご確認ください。"><label for="mail" >メールをご確認ください</label>
+            </li>
+        </tr>
+        <tr>
+          <th>メモ</th>
+          <td>
+              <textarea name="memo" id="memo"></textarea>
+          </td>
+       </tr>
+       <tr>
+          <th>電話番号</th>
+          <td>
+            <input type="tel" name="number" id="number">
+          </td>
+        </tr>
+      </table>
+      <div class="btn_list">
+        <p class="btn" id="save">保存する</p>
+        <p class="btn" id="clear">全て削除</p>
+        <p class="btn_dw" id="delete">1件削除</p>
+        <p class="btn_dw" id="revise">上書きする</p>
+      </div>
+  </div>
+
+  <ul class="husen_list" id="husen_list">
+  </ul>
+</main>
+<!-- ここに追加データが挿入される -->
+<script>
+//0.ボタンを非活性化
+ $("#delete, #revise").off();
+
+//1.日時取得
+  let now = new Date();            //日付取得準備（必須）！！
+  let year = now.getFullYear();    //年
+  let m = ("0"+(now.getMonth() + 1)).slice(-2);    //月（2桁表示）
+  let d =  ("0"+now.getDate()).slice(-2);  //日（2桁表示）
+  let h = ("0"+now.getHours()).slice(-2);          //時（2桁表示）
+  let mi = ("0"+now.getMinutes()).slice(-2);        //分（2桁表示）
+
+  //日時表示文字列の作成(その他の時間の表示に合わせる)
+  let now_date = year + "-" + m + "-" + d;
+  let now_time = h + ":" + mi ;
+
+// 2.入電時間の選択
+// その他の時刻がクリックされたら、日時選択のdisabledを解除
+$("#othertime").change(function() {
+    $("#date, #time").prop('disabled', false);
+});
+// 現在日時がクリックされたら、日時選択をdisabledに
+$("#now").change(function(){
+    $("#date, #time").prop('disabled', true);
+});
+
+//3.Save クリックイベント
+$("#save").on("click", function(){
+  // 各項目の内容を取得
+  // その他の時間にチェックされているか確認
+  const check = $('input[name=whichtime]:eq(1)').prop('checked');
+  // されていないなら、現在時刻を参照
+    if(check == false){
+      const date = now_date;
+      const time = now_time;
+      console.log(date);
+      const from = $("#from").val();
+      const to = $("#to").val();
+      const memo = $("#memo").val();
+      const number = $("#number").val();
+      // todoのチェックされている項目を調べて、valueを取得する
+      const request = $('input[name="request"]:checked').val();
+      // objectにする
+      const value ={
+        "date": date,
+        "time": time,
+        "from": from,
+        "to": to,
+        "request": request,
+        "memo": memo,
+        "number": number
+      }
+      // jsonに変換
+      const json = JSON.stringify(value);
+      // keyは日付＋時間
+      const key = date + time;
+      // storage内に同じ時刻のものがあった場合にアラートを出す
+      for (let index = 0; index < localStorage.length; index++) {
+        const keyinstorage = localStorage.key(index);
+        if (key == keyinstorage) {
+            alert("同時刻のメモは複数保存できません");
+            return false;
+        }
+      }
+      // 入力した内容をlocalstorageに入れる
+      localStorage.setItem(key, json);
+      //付箋に表示させる
+      const html='<li class="husen"><div class="title"><p>'+value.date + "</p><p>"
+      + value.time +'</p><p>'+value.from+"様"+'</p><p>  ⇒  '+ value.to 
+      +'さん</p></div><p>'+ value.request +'</p><p>'+value.memo+'</p><p>'+
+      value.number+'</p></li>';
+      $("#husen_list").prepend(html);
+      alert("保存しました");
+      location.reload();
+      }
+    // その他の時間がチェックされているなら、その時間を参照
+    if(check == true){
+      const date = $("#date").val();
+      const time = $("#time").val();
+      const from = $("#from").val();
+      const to = $("#to").val();
+      const memo = $("#memo").val();
+      const number = $("#number").val();
+      // todoのチェックされている項目を調べて、valueを取得する
+      const request = $('input[name="request"]:checked').val();
+      // objectにする
+      const value ={
+        "date": date,
+        "time": time,
+        "from": from,
+        "to": to,
+        "request": request,
+        "memo": memo,
+        "number": number
+      }
+    // 日時が空白ならアラートを出す
+      if (date == "") {
+          alert("日時を選択してください");
+          return false;
+        }
+      // jsonに変換
+      const json = JSON.stringify(value);
+      // keyは日付＋時間
+      const key = date + time;
+      // storage内に同じ時刻のものがあった場合にアラートを出す
+      for (let index = 0; index < localStorage.length; index++) {
+        const keyinstorage = localStorage.key(index);
+        if (key == keyinstorage) {
+          alert("同時刻のメモは複数保存できません");
+          return false;
+        }
+      }
+      // 入力した内容をlocalstorageに入れる
+      localStorage.setItem(key, json);
+      //付箋に表示させる
+      const html='<li class="husen"><div class="title"><p>'+value.date + "</p><p>"
+      + value.time +'</p><p>'+value.from+"様"+'</p><p>  ⇒  '+ value.to 
+      +'さん</p></div><p>'+ value.request +'</p><p>'+value.memo+'</p><p>'+
+      value.number+'</p></li>';
+      $("#husen_list").append(html);
+      alert("保存しました");
+      location.reload();
+      }
+});
+
+//4.ページ読み込み：保存データ取得表示(リロードしたときに、以前に保存したデータを引っ張り出して、表示させる)
+// ※これが一番に実行される
+// ローカルストレージの中の個数分、処理をループさせる
+for (let index = 0; index < localStorage.length; index++) {
+    // ローカルストレージのkeyのindex番目の中身を取得
+    const key = localStorage.key(index);
+    // keyに対応するvalue=json形式も取得
+    const json = localStorage.getItem(key);
+    // jsonを解凍
+    const value = JSON.parse(json);
+    // 取得したものをhusenに表示させる
+    const html='<li class="husen"><div class="title"><p>'+value.date + "</p><p>"
+    + value.time +'</p><p>'+value.from+"様"+'</p><p>  ⇒  '+ value.to 
+    +'さん</p></div><p>'+ value.request +'</p><p>'+value.memo+'</p><p>'+
+    value.number+'</p></li>';
+    $("#husen_list").append(html);
+}
+
+//5.clear クリックイベント
+$("#clear").on("click", function(){
+    if(!confirm("全て削除してよろしいですか？")){
+        return false;
+    }else{
+    localStorage.clear();
+    $("#husen_list").empty();
+    alert("削除しました");
+    location.reload();
+    }
+});
+
+// 6.表の中から項目を選択して、対応するlocalstorageの中身を付箋に表示させる
+$(".husen").on("click", function(){
+    // ほかのhusenをクリックしたらこの処理はリセットして、新しいクリックのほうを実行する
+    $("#delete").off();
+    $("#revise").off();
+    const n =$("#husen_list li").index(this);
+    const key = localStorage.key(n);
+    const json = localStorage.getItem(key);
+    const value = JSON.parse(json);
+    // 取得したものを入力フォームに表示させる
+    $("#date").val(value.date);
+    $("#time").val(value.time);
+    $("#from").val(value.from);
+    $("#to").val(value.to);
+    $('input[value="'+value.request+'"]').prop('checked', true);
+    $("#memo").val(value.memo);
+    $("#number").val(value.number);
+    $("#now, #othertime").prop('disabled', true);
+    $("#now").prop('checked', false);
+    $("#othertime").prop('checked', true);
+    // saveとclearボタンを非活性化
+    $("#save, #clear").off();
+    $("#save, #clear").removeClass('btn');
+    $("#save, #clear").addClass('btn_dw');
+    $("#delete, #revise").removeClass('btn_dw');
+    $("#delete, #revise").addClass('btn');
+    // 7.deleteの処理
+    $("#delete").on("click", function(){
+        if(!confirm("削除してよろしいですか？")){
+        return false;
+        }else{
+        localStorage.removeItem(key);
+        alert("削除しました");
+        location.reload();
+        }
+    });
+    // 8.reviseの処理
+    $("#revise").on("click", function(){
+        // 確認
+        if(!confirm("上書き保存してよろしいですか？")){
+        return false;
+        }else{
+        // 入力した内容をlocalstorageに入れる
+        const r_date = $("#date").val();
+        const r_time = $("#time").val();
+        const r_from = $("#from").val();
+        const r_to = $("#to").val();
+        const r_request = $('input[name="request"]:checked').val();
+        const r_memo = $("#memo").val();
+        const r_number = $("#number").val();
+      // objectにする
+        const r_value ={
+        "date": r_date,
+        "time": r_time,
+        "from": r_from,
+        "to": r_to,
+        "request": r_request,
+        "memo": r_memo,
+        "number": r_number
+      }
+      // jsonに変換
+      const r_json = JSON.stringify(r_value);
+      // 入力した内容をlocalstorageに入れる
+      localStorage.setItem(key, r_json);
+      // husenに表示させる
+      const html='<li class="husen"><div class="title"><p>'+r_value.r_date + "</p><p>"
+      + r_value.r_time +'</p><p>'+r_value.r_from+"様"+'</p><p>  ⇒  '+ r_value.r_to 
+      +'さん</p></div><p>'+ r_value.r_request+ '</p><p>'+r_value.r_memo+'</p><p>'+r_value.r_number+
+      '</p></li>';
+      $("#husen_list").append(html);
+      location.reload();
+      }
+      });
+});
+
+</script>
+</body>
+</html>
